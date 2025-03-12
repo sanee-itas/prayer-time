@@ -1,5 +1,116 @@
+# import sys
+# from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QTextBrowser
+
+# class PrayerTimesApp(QMainWindow):
+#     def __init__(self):
+#         super().__init__()
+#         self.setWindowTitle("Prayer Times")
+#         self.setGeometry(100, 100, 1024, 600)
+
+#         self.central_widget = QWidget()
+#         self.setCentralWidget(self.central_widget)
+#         self.layout = QVBoxLayout(self.central_widget)
+
+#         self.browser = QTextBrowser()
+#         self.layout.addWidget(self.browser)
+
+#         self.load_prayer_times()
+
+#     def load_prayer_times(self):
+#         prayer_times = [
+#             {'name': 'Fajr', 'time': '5:41 AM'},
+#             {'name': 'Dhuhr', 'time': '12:44 PM'},
+#             {'name': 'Asr', 'time': '3:55 PM'},
+#             {'name': 'Maghrib', 'time': '6:59 PM'},
+#             {'name': 'Isha', 'time': '7:39 PM'},
+#         ]
+
+#         html_content = self.generate_html(prayer_times)
+#         self.browser.setHtml(html_content)
+
+#     def generate_html(self, prayer_times):
+#         prayer_entries = ""
+#         for prayer in prayer_times:
+#             prayer_entries += f"""
+#             <div class="prayer-entry">
+#                 <span class="prayer-name">{prayer['name']}</span>
+#                 <span class="prayer-time">{prayer['time']}</span>
+#             </div>
+#             """
+
+#         html = f"""
+#         <!DOCTYPE html>
+#         <html>
+#         <head>
+#             <style type="text/css">
+#                 body {{
+#                     background-color: #1A1A1A;
+#                     color: white;
+#                     font-family: Arial, sans-serif;
+#                     margin: 0;
+#                     padding: 20px;
+#                 }}
+#                 .container {{
+#                     width: 100%;
+#                     text-align: center;
+#                 }}
+#                 .date {{
+#                     font-size: 36px;
+#                     font-weight: bold;
+#                     margin-bottom: 10px;
+#                 }}
+#                 .hijri-date {{
+#                     font-size: 24px;
+#                     color: #A0A0A0;
+#                     margin-bottom: 20px;
+#                 }}
+#                 .divider {{
+#                     width: 128px;
+#                     height: 4px;
+#                     background-color: #4CAF50;
+#                     margin: 20px auto;
+#                     border-radius: 4px;
+#                 }}
+#                 .prayer-entry {{
+#                     background-color: #2A2A2A;
+#                     margin: 10px 0;
+#                     padding: 15px;
+#                     text-align: left;
+#                 }}
+#                 .prayer-name {{
+#                     font-size: 28px;
+#                     font-weight: bold;
+#                     margin-right: 20px;
+#                 }}
+#                 .prayer-time {{
+#                     font-size: 28px;
+#                     font-weight: bold;
+#                 }}
+#             </style>
+#         </head>
+#         <body>
+#             <div class="container">
+#                 <div class="date">12th March 2024</div>
+#                 <div class="hijri-date">12 Ramadhan 1446 AH</div>
+#                 <div class="divider"></div>
+#                 {prayer_entries}
+#             </div>
+#         </body>
+#         </html>
+#         """
+#         return html
+
+# if __name__ == '__main__':
+#     app = QApplication(sys.argv)
+#     window = PrayerTimesApp()
+#     window.show()
+#     sys.exit(app.exec_())
+
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QTextBrowser
+from datetime import datetime
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, 
+                            QWidget, QLabel, QHBoxLayout)
+from PyQt5.QtCore import Qt
 
 class PrayerTimesApp(QMainWindow):
     def __init__(self):
@@ -7,20 +118,59 @@ class PrayerTimesApp(QMainWindow):
         self.setWindowTitle("Prayer Times")
         self.setGeometry(100, 100, 1024, 600)
 
-        # Set up the central widget and layout
+        # Central widget and main layout
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.layout = QVBoxLayout(self.central_widget)
+        self.main_layout = QVBoxLayout(self.central_widget)
+        self.main_layout.setContentsMargins(20, 20, 20, 20)
 
-        # Create a QTextBrowser to display HTML
-        self.browser = QTextBrowser()
-        self.layout.addWidget(self.browser)
+        # Set background color
+        self.central_widget.setStyleSheet("background-color: #1A1A1A;")
 
-        # Load prayer times and update HTML
+        # Load title and prayer times
+        self.load_title()
         self.load_prayer_times()
 
+    def load_title(self):
+        date_label = QLabel("12th March 2024")
+        date_label.setStyleSheet("""
+            color: white;
+            font-size: 36px;
+            font-weight: bold;
+        """)
+        date_label.setAlignment(Qt.AlignCenter)
+
+        hijri_label = QLabel("12 Ramadhan 1446 AH")
+        hijri_label.setStyleSheet("""
+            color: #A0A0A0;
+            font-size: 24px;
+        """)
+        hijri_label.setAlignment(Qt.AlignCenter)
+
+        divider = QWidget()
+        divider.setFixedSize(128, 4)
+        divider.setStyleSheet("""
+            background-color: #4CAF50;
+            border-radius: 2px;
+        """)
+
+        self.main_layout.addWidget(date_label)
+        self.main_layout.addWidget(hijri_label)
+        self.main_layout.addWidget(divider, alignment=Qt.AlignCenter)
+        self.main_layout.addSpacing(20)
+
+    def get_next_prayer(self, prayer_times):
+        now = datetime.now()
+        current_time = now.hour * 60 + now.minute
+
+        for i, prayer in enumerate(prayer_times):
+            time_obj = datetime.strptime(prayer['time'], '%I:%M %p')
+            prayer_minutes = time_obj.hour * 60 + time_obj.minute
+            if prayer_minutes > current_time:
+                return i
+        return 0
+
     def load_prayer_times(self):
-        # Define prayer times
         prayer_times = [
             {'name': 'Fajr', 'time': '5:41 AM'},
             {'name': 'Dhuhr', 'time': '12:44 PM'},
@@ -29,95 +179,46 @@ class PrayerTimesApp(QMainWindow):
             {'name': 'Isha', 'time': '7:39 PM'},
         ]
 
-        # Render HTML
-        html_content = self.generate_html(prayer_times)
-        self.browser.setHtml(html_content)
+        next_prayer_index = self.get_next_prayer(prayer_times)
 
-    def generate_html(self, prayer_times):
-        prayer_entries = ""
-        for prayer in prayer_times:
-            prayer_entries += f"""
-            <div class="prayer-entry">
-                <div class="prayer-name">{prayer['name']}</div>
-                <div class="prayer-time">{prayer['time']}</div>
-            </div>
-            """
+        for i, prayer in enumerate(prayer_times):
+            prayer_widget = QWidget()
+            is_next_prayer = (i == next_prayer_index)
+            prayer_widget.setStyleSheet("""
+                background-color: #2A2A2A;
+                padding: 10px;
+            """)
+            
+            prayer_layout = QHBoxLayout(prayer_widget)
+            prayer_layout.setContentsMargins(10, 10, 10, 10)
 
-        html = f"""
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Prayer Times</title>
-            <style>
-                /* Tailwind-like CSS */
-                body {{
-                    background-color: #1A1A1A; /* bg-secondary */
-                    color: white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    min-height: 100vh;
-                    margin: 0;
-                    font-family: Arial, sans-serif;
-                }}
-                .container {{
-                    width: 1024px; /* w-[1024px] */
-                    text-align: center;
-                }}
-                .date {{
-                    font-size: 3rem; /* Increased font size */
-                    font-weight: bold;
-                    margin-bottom: 1rem; /* mb-4 */
-                }}
-                .hijri-date {{
-                    font-size: 2.25rem; /* Increased font size */
-                    color: #A0A0A0; /* text-gray-300 */
-                }}
-                .divider {{
-                    width: 8rem; /* w-32 */
-                    height: 0.25rem; /* h-1 */
-                    background-color: #4CAF50; /* bg-primary */
-                    margin: 1.5rem auto; /* mx-auto mt-6 */
-                    border-radius: 9999px; /* rounded-full */
-                }}
-                .prayer-list {{
-                    display: flex;
-                    flex-direction: column;
-                    gap: 2rem; /* space-y-8 */
-                }}
-                .prayer-entry {{
-                    background-color: rgba(128, 128, 128, 0.3); /* bg-gray-800/30 */
-                    border-radius: 0.5rem; /* rounded-lg */
-                    padding: 1.5rem; /* p-6 */
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                }}
-                .prayer-name {{
-                    font-size: 2.5rem; /* Increased font size */
-                    font-weight: bold;
-                }}
-                .prayer-time {{
-                    font-size: 2.5rem; /* Increased font size */
-                    font-weight: bold;
-                }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="date">12th March 2024</div>
-                <div class="hijri-date">12 Ramadhan 1446 AH</div>
-                <div class="divider"></div>
-                <div class="prayer-list">
-                    {prayer_entries}
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        return html
+            # Prayer name label
+            name_label = QLabel(prayer['name'])
+            name_label.setStyleSheet("""
+                color: {color};
+                font-size: 28px;
+                font-weight: bold;
+            """.format(color="#4CAF50" if is_next_prayer else "white"))
+
+            # Prayer time label
+            time_label = QLabel(prayer['time'])
+            time_label.setStyleSheet("""
+                color: {color};
+                font-size: 28px;
+                font-weight: bold;
+            """.format(color="#4CAF50" if is_next_prayer else "white"))
+
+            # Add stretch on both sides and between (space-around effect)
+            prayer_layout.addStretch(1)  # Space before name
+            prayer_layout.addWidget(name_label)
+            prayer_layout.addStretch(1)  # Space between name and time
+            prayer_layout.addWidget(time_label)
+            prayer_layout.addStretch(1)  # Space after time
+
+            # Add to main layout
+            self.main_layout.addWidget(prayer_widget)
+            self.main_layout.setStretchFactor(prayer_widget, 1)
+            self.main_layout.addSpacing(10)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
