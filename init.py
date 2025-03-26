@@ -59,9 +59,9 @@ class PrayerTimesApp(QMainWindow):
         next_prayer = self.get_prayer_data()[next_prayer_index]
         next_prayer_label = QLabel(next_prayer["name"])
         next_prayer_label.setStyleSheet("font-size: 36px; color: white; font-weight: bold;")
-        start_label = QLabel(f"Start\n{next_prayer['start']}")
+        start_label = QLabel(f"Start\n{next_prayer['start_tomorrow']}")
         start_label.setStyleSheet("font-size: 48px; color: black; font-weight: bold;")
-        iqama_label = QLabel(f"Iqama\n{next_prayer['iqama']}")
+        iqama_label = QLabel(f"Iqama\n{next_prayer['iqama_tomorrow']}")
         iqama_label.setStyleSheet("font-size: 48px; color: black; font-weight: bold;")
 
         self.green_layout.addWidget(next_prayer_label)
@@ -73,29 +73,159 @@ class PrayerTimesApp(QMainWindow):
         self.left_panel_layout.addWidget(self.white_section)
         self.left_panel_layout.addWidget(self.green_section)
 
-        # Right panel (prayer times table)
+        # Right panel (prayer times table, integrated from PrayerTimesTable)
         self.right_panel = QWidget()
-        self.right_panel.setStyleSheet("background-color: #4682B4;")
+        self.right_panel.setStyleSheet("background-color: #800000;")  # Red background for gaps
         self.table_layout = QGridLayout(self.right_panel)
-        self.table_layout.setHorizontalSpacing(5)
-        self.table_layout.setVerticalSpacing(5)
+        self.table_layout.setHorizontalSpacing(10)  # Equal gaps between columns
+        self.table_layout.setVerticalSpacing(10)    # Equal gaps between rows
 
-        self.table_layout.addWidget(QLabel("Tomorrow"), 0, 1)
-        self.table_layout.addWidget(QLabel("Start"), 0, 2)
-        self.table_layout.addWidget(QLabel("Iqama"), 0, 3)
+        # Set column widths (stretch factors) for the entire layout
+        self.table_layout.setColumnStretch(0, 4)  # Prayer name (40%)
+        self.table_layout.setColumnStretch(1, 3)  # Start (30%)
+        self.table_layout.setColumnStretch(2, 4)  # Iqama (40%)
 
+        # Get prayer data and next prayer index
         prayers = self.get_prayer_data()
-        for i, prayer in enumerate(prayers):
-            name_label = QLabel(prayer["name"])
-            name_label.setStyleSheet("color: white; font-size: 20px; background-color: #4682B4; padding: 5px;")
-            start_label = QLabel(prayer["start"])
-            start_label.setStyleSheet(f"color: {'#FFD700' if i == next_prayer_index else '#32CD32'}; font-size: 20px; text-align: right; padding: 5px; background-color: #4682B4;")
-            iqama_label = QLabel(prayer["iqama"] if prayer["iqama"] else "")
-            iqama_label.setStyleSheet(f"color: {'#FFD700' if i == next_prayer_index else '#32CD32'}; font-size: 20px; text-align: right; padding: 5px; background-color: #4682B4;")
+        next_prayer_index = self.get_next_prayer(prayers)
 
-            self.table_layout.addWidget(name_label, i + 1, 1)
-            self.table_layout.addWidget(start_label, i + 1, 2)
-            self.table_layout.addWidget(iqama_label, i + 1, 3)
+        # Row 1: Header Row
+        header_date_label = QLabel("12 Ramadan, 1446")
+        header_date_label.setStyleSheet("color: white; font-size: 14px; background-color: #4682B4; padding: 5px; text-align: left;")
+        header_date_label.setAlignment(Qt.AlignBottom | Qt.AlignLeft)
+        header_start_label = QLabel("Start")
+        header_start_label.setStyleSheet("color: white; font-size: 55px; background-color: #4682B4; text-align: center; padding: 5px;")
+        header_start_label.setAlignment(Qt.AlignCenter)
+        header_iqama_label = QLabel("Iqama")
+        header_iqama_label.setStyleSheet("color: white; font-size: 55px; background-color: #4682B4; text-align: center; padding: 5px;")
+        header_iqama_label.setAlignment(Qt.AlignCenter)
+
+        self.table_layout.addWidget(header_date_label, 0, 0)
+        self.table_layout.addWidget(header_start_label, 0, 1)
+        self.table_layout.addWidget(header_iqama_label, 0, 2)
+
+        # Rows 2, 4, 5, 6, 7: Fajr, Zuhr, Asr, Maghrib, Isha (3 columns)
+        row_indices = [2, 4, 5, 6, 7]
+        prayer_indices = [0, 2, 3, 4, 5]  # Fajr, Zuhr, Asr, Maghrib, Isha
+        for row, prayer_idx in zip(row_indices, prayer_indices):
+            prayer_data = prayers[prayer_idx]
+            is_next_prayer = (prayer_idx == next_prayer_index)
+            time_color = '#FFD700' if is_next_prayer else '#32CD32'
+
+            # First column: Prayer name
+            name_label = QLabel(prayer_data["name"])
+            name_label.setStyleSheet("color: white; font-size: 55px; background-color: #4682B4; padding: 5px;")
+
+            # Second column: Start (bold Tomorrow center, small Today bottom-right)
+            start_widget = QWidget()
+            start_widget.setStyleSheet("background-color: #32CD32; color: white;")
+            start_layout = QVBoxLayout(start_widget)
+            start_layout.setContentsMargins(5, 5, 5, 5)
+            start_layout.setSpacing(0)
+
+            start_layout.addStretch(1)
+            start_bold_label = QLabel(prayer_data["start_tomorrow"])
+            start_bold_label.setStyleSheet("color: white; font-size: 55px; font-weight: bold; text-align: center;")
+            start_bold_label.setAlignment(Qt.AlignCenter)
+
+            start_center_widget = QWidget()
+            start_center_layout = QHBoxLayout(start_center_widget)
+            start_center_layout.addStretch(1)
+            start_center_layout.addWidget(start_bold_label)
+            start_center_layout.addStretch(1)
+
+            start_layout.addWidget(start_center_widget)
+            start_layout.addStretch(1)
+
+            start_small_label = QLabel(prayer_data["start_today"])
+            start_small_label.setStyleSheet("color: white; font-size: 12px; text-align: right;")
+            start_small_label.setAlignment(Qt.AlignBottom | Qt.AlignRight)
+
+            start_layout.addWidget(start_small_label)
+
+            # Third column: Iqama (bold Tomorrow center, small Today bottom-right)
+            iqama_widget = QWidget()
+            iqama_widget.setStyleSheet("background-color: #32CD32; color: white;")
+            iqama_layout = QVBoxLayout(iqama_widget)
+            iqama_layout.setContentsMargins(5, 5, 5, 5)
+            iqama_layout.setSpacing(0)
+
+            iqama_layout.addStretch(1)
+            iqama_bold_label = QLabel(prayer_data["iqama_tomorrow"])
+            iqama_bold_label.setStyleSheet("color: white; font-size: 55px; font-weight: bold; text-align: center;")
+            iqama_bold_label.setAlignment(Qt.AlignCenter)
+
+            iqama_center_widget = QWidget()
+            iqama_center_layout = QHBoxLayout(iqama_center_widget)
+            iqama_center_layout.addStretch(1)
+            iqama_center_layout.addWidget(iqama_bold_label)
+            iqama_center_layout.addStretch(1)
+
+            iqama_layout.addWidget(iqama_center_widget)
+            iqama_layout.addStretch(1)
+
+            iqama_small_label = QLabel(prayer_data["iqama_today"])
+            iqama_small_label.setStyleSheet(f"color: {time_color}; font-size: 12px; text-align: right;")
+            iqama_small_label.setAlignment(Qt.AlignBottom | Qt.AlignRight)
+
+            iqama_layout.addWidget(iqama_small_label)
+
+            # Add widgets to the grid
+            self.table_layout.addWidget(name_label, row - 1, 0)
+            self.table_layout.addWidget(start_widget, row - 1, 1)
+            self.table_layout.addWidget(iqama_widget, row - 1, 2)
+
+        # Rows 3, 8: Shurooq, Jum'ah (2 columns)
+        row_indices = [3, 8]
+        prayer_indices = [1, 6]  # Shurooq, Jum'ah
+        for row, prayer_idx in zip(row_indices, prayer_indices):
+            prayer_data = prayers[prayer_idx]
+            is_next_prayer = (prayer_idx == next_prayer_index)
+            time_color = '#FFD700' if is_next_prayer else '#32CD32'
+
+            # First column: Prayer name (spans 1 column)
+            name_label = QLabel(prayer_data["name"])
+            name_label.setStyleSheet("color: white; font-size: 55px; background-color: #4682B4; padding: 5px;")
+
+            # Second column: Start (bold Tomorrow center, small Today bottom-right, spans 2 columns)
+            start_widget = QWidget()
+            start_widget.setStyleSheet("background-color: #32CD32;")
+            start_layout = QVBoxLayout(start_widget)
+            start_layout.setContentsMargins(5, 5, 5, 5)
+            start_layout.setSpacing(0)
+
+            start_layout.addStretch(1)
+            start_bold_label = QLabel(prayer_data["start_tomorrow"] if prayer_data["start_tomorrow"] else prayer_data["iqama_tomorrow"])
+            start_bold_label.setStyleSheet("color: white; font-size: 55px; font-weight: bold; text-align: center;")
+            start_bold_label.setAlignment(Qt.AlignCenter)
+
+            start_center_widget = QWidget()
+            start_center_layout = QHBoxLayout(start_center_widget)
+            start_center_layout.addStretch(1)
+            start_center_layout.addWidget(start_bold_label)
+            start_center_layout.addStretch(1)
+
+            start_layout.addWidget(start_center_widget)
+            start_layout.addStretch(1)
+
+            start_small_label = QLabel(prayer_data["start_today"] if prayer_data["start_today"] else prayer_data["iqama_today"])
+            start_small_label.setStyleSheet(f"color: {time_color}; font-size: 12px; text-align: right;")
+            start_small_label.setAlignment(Qt.AlignBottom | Qt.AlignRight)
+
+            start_layout.addWidget(start_small_label)
+
+            # Add widgets to the grid
+            # Prayer name in Column 0, spans 1 column
+            self.table_layout.addWidget(name_label, row - 1, 0, 1, 1)
+            # Start time in Column 1, spans 2 columns (Columns 1 and 2)
+            self.table_layout.addWidget(start_widget, row - 1, 1, 1, 2)
+
+        # Set row heights
+        self.table_layout.setRowMinimumHeight(0, 70)  # Header row (increased height)
+        for row in [1, 3, 4, 5, 6]:  # Rows 2, 4, 5, 6, 7 (Fajr, Zuhr, Asr, Maghrib, Isha)
+            self.table_layout.setRowMinimumHeight(row, 60)  # Increased for larger font
+        self.table_layout.setRowMinimumHeight(2, 30)  # Row 3 (Shurooq)
+        self.table_layout.setRowMinimumHeight(7, 30)  # Row 8 (Jum'ah)
 
         # Add panels to main layout
         self.main_layout.addWidget(self.left_panel, 1)  
@@ -107,21 +237,21 @@ class PrayerTimesApp(QMainWindow):
 
     def get_prayer_data(self):
         return [
-            {"name": "Fajr", "start": "6:34", "iqama": "6:54"},
-            {"name": "Shurooq", "start": "7:51", "iqama": ""},
-            {"name": "Zuhr", "start": "1:44", "iqama": "2:00"},
-            {"name": "Asr", "start": "5:50", "iqama": "6:15"},
-            {"name": "Maghrib", "start": "7:38", "iqama": "7:53"},
-            {"name": "Isha", "start": "8:54", "iqama": "9:09"},
-            {"name": "Jum'ah", "start": "", "iqama": "2:10", "khutbah": "2:10"}
+            {"name": "Fajr", "start_today": "6:32", "start_tomorrow": "6:34", "iqama_today": "6:52", "iqama_tomorrow": "6:54"},
+            {"name": "Shurooq", "start_today": "7:49", "start_tomorrow": "7:51", "iqama_today": "", "iqama_tomorrow": ""},
+            {"name": "Zuhr", "start_today": "1:42", "start_tomorrow": "1:44", "iqama_today": "1:58", "iqama_tomorrow": "2:00"},
+            {"name": "Asr", "start_today": "5:48", "start_tomorrow": "5:50", "iqama_today": "6:13", "iqama_tomorrow": "6:15"},
+            {"name": "Maghrib", "start_today": "7:36", "start_tomorrow": "7:38", "iqama_today": "7:51", "iqama_tomorrow": "7:53"},
+            {"name": "Isha", "start_today": "8:52", "start_tomorrow": "8:54", "iqama_today": "9:07", "iqama_tomorrow": "9:09"},
+            {"name": "Jum'ah", "start_today": "", "start_tomorrow": "", "iqama_today": "2:08", "iqama_tomorrow": "2:10"}
         ]
 
     def get_next_prayer(self, prayers):
         now = datetime.now()
         current_time = now.hour * 60 + now.minute
         for i, prayer in enumerate(prayers):
-            if prayer["start"]:
-                time_obj = datetime.strptime(prayer["start"], '%H:%M')
+            if prayer["start_today"]:
+                time_obj = datetime.strptime(prayer["start_today"], '%H:%M')
                 prayer_minutes = time_obj.hour * 60 + time_obj.minute
                 if prayer_minutes > current_time:
                     return i
